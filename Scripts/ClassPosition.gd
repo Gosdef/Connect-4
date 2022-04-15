@@ -32,7 +32,7 @@ func can_play(column):
 	# return field[0][column] == empty
 	return height[column] < gl.table_height
 
-func isWinningMove2(j):
+func isWinningMove___(j):
 	var ans
 	for row in range(gl.table_size[1] - 1, -1, -1):
 		if self.field[row][j] == empty:
@@ -96,7 +96,6 @@ func isWinningMove2(j):
 
 func isWinningMove(col):
 	#print('-----------------')
-	var dir = [Vector2(1, 0), Vector2(col, height[col])]
 	var win_arr = []
 	var current_player = last_move
 	var prev_height = height[col] - 1
@@ -105,16 +104,22 @@ func isWinningMove(col):
 		and field[col][prev_height-1] == current_player 
 		and field[col][prev_height-2] == current_player 
 		and field[col][prev_height-3] == current_player):
-			show()
-			#create_win_line(null)
+			gl.win_line = [
+				Vector2(prev_height, col), 
+				Vector2(prev_height - 1, col), 
+				Vector2(prev_height - 2, col), 
+				Vector2(prev_height - 3, col)
+			]
+			
 			return true
 	
+	var cor = []
 	for dy in [-1, 0, 1]:  # Iterate on horizontal (dy = 0) or two diagonal directions (dy = -1 or dy = 1).
+		cor = [Vector2(prev_height, col)]
 		var nb = 0         # counter of the number of stones of current player surronding the played stone in tested direction
 		for dx in [-1, 1]: # count continuous stones of current player on the left, then right of the played column.
 			var x = col + dx
 			var y = prev_height + dx * dy
-			#print(dir[1])
 			var condition = (
 				(x >= 0) and
 				(x < gl.table_width) and 
@@ -123,7 +128,7 @@ func isWinningMove(col):
 				(field[x][y] == current_player)
 			)
 			while condition:
-				#win_arr.append(Vector2(x, y))
+				cor.append(Vector2(y, x))
 				x += dx
 				y += dx * dy
 				condition = (
@@ -134,13 +139,59 @@ func isWinningMove(col):
 					(field[x][y] == current_player)
 				)
 				nb += 1
-				
-			dir = [Vector2(dx, dy), Vector2(x, y)]
 		if(nb >= 3):
-			print(1)
-			show()
-			create_win_line(dir)
-			#gl.win_line = win_arr
+			gl.win_line = cor #[Vector2(1, 1), Vector2(1, 2), Vector2(1, 3), Vector2(1, 4)]
+			return true  # there is an aligment if at least 3 other stones of the current user 
+						 # are surronding the played stone in the tested direction.  
+	return false
+
+func isWinningMove2(col):
+	#print('-----------------')
+	var win_arr = []
+	var current_player = -last_move
+	var prev_height = height[col]
+	# check for vertical alignments
+	if(prev_height >= 3 
+		and field[col][prev_height-1] == current_player 
+		and field[col][prev_height-2] == current_player 
+		and field[col][prev_height-3] == current_player):
+			gl.win_line = [
+				Vector2(prev_height, col), 
+				Vector2(prev_height - 1, col), 
+				Vector2(prev_height - 2, col), 
+				Vector2(prev_height - 3, col)
+			]
+			
+			return true
+	
+	var cor = []
+	for dy in [-1, 0, 1]:  # Iterate on horizontal (dy = 0) or two diagonal directions (dy = -1 or dy = 1).
+		cor = [Vector2(prev_height, col)]
+		var nb = 0         # counter of the number of stones of current player surronding the played stone in tested direction
+		for dx in [-1, 1]: # count continuous stones of current player on the left, then right of the played column.
+			var x = col + dx
+			var y = prev_height + dx * dy
+			var condition = (
+				(x >= 0) and
+				(x < gl.table_width) and 
+				(y >= 0) and 
+				(y < gl.table_height) and 
+				(field[x][y] == current_player)
+			)
+			while condition:
+				cor.append(Vector2(y, x))
+				x += dx
+				y += dx * dy
+				condition = (
+					(x >= 0) and 
+					(x < gl.table_width) and 
+					(y >= 0) and 
+					(y < gl.table_height) and 
+					(field[x][y] == current_player)
+				)
+				nb += 1
+		if(nb >= 3):
+			gl.win_line = cor #[Vector2(1, 1), Vector2(1, 2), Vector2(1, 3), Vector2(1, 4)]
 			return true  # there is an aligment if at least 3 other stones of the current user 
 						 # are surronding the played stone in the tested direction.  
 	return false
@@ -174,7 +225,7 @@ func play(col):
 	self.field[col][row] = -self.last_move
 	self.height[col] += 1
 	self.moves += 1
-	self.last_move = -last_move
+	self.last_move = -self.last_move
 	return row
 
 func show():
@@ -196,8 +247,11 @@ func load_arr(arr):
 	elif sm == 1:
 		self.last_move = human
 	else:
-		print('CTDYVFTDBRFYUNGIUMYOIN<PO')
+		print('Wrong number of moves')
 
+func load_arr_by_string(string):
+	for i in string:
+		play(int(i) - 1)
 
 func nbMoves():
 	return self.moves

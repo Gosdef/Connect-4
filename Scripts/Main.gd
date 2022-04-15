@@ -6,25 +6,22 @@ var bot = load("res://Scripts/ClassBot.gd").new(cur_pos)
 
 func _ready():
 	randomize()
+	print('------------------')
 	#cur_pos.load_arr([
-	#	[1, -1, 1, -1, 1, -1],
+	#	[-1, 1, -1, -1, 1, 1],
+	#	[1, -1, 1, -1, -1, 0],
+	#	[-1, -1, 1, -1, -1, 1],
 	#	[-1, 1, -1, 1, -1, 1],
-	#	[1, 1, 1, -1, 1, -1],
-	#	[0, 0, 0, 0, 0, 0],
-	#	[-1, 1, -1, 1, -1, 1],
-	#	[1, -1, 1, -1, 1, -1],
-	#	[-1, 1, -1, 1, -1, 1],
+	#	[-1, 1, 0, 0, 0, 0],
+	#	[1, -1, 1, -1, 1, 0],
+	#	[1, 1, 1, -1, 0, 0],
 	#])
 	
-	cur_pos.load_arr([
-		[1, -1, 1, -1, 1, -1],
-		[-1, 1, -1, 1, -1, 1],
-		[0, 0, 0, 0, 0, 0],
-		[0, 0, 0, 0, 0, 0],
-		[0, 0, 0, 0, 0, 0],
-		[1, -1, 1, -1, 1, -1],
-		[-1, 1, -1, 1, -1, 1],
-	])
+	cur_pos.load_arr_by_string('12156756715535615116237724723')
+	if cur_pos.last_move == cur_pos.ai:
+		gl.player_turn = true
+	else:
+		gl.player_turn = false
 
 func _process(delta):
 	if gl.player_turn == false and not gl.fl_game_end:
@@ -56,7 +53,7 @@ func _draw():
 		for j in range(gl.table_height):
 			draw_square(gl.start_pos + Vector2(i * 64, j * 64), gl.start_pos + Vector2(i * 64 + 64, j * 64 + 64))
 	
-	if gl.win_line != null:
+	if gl.win_line != null and gl.fl_game_end:
 		for pos in gl.win_line:
 			var i = gl.table_height - pos[0] - 1
 			var j = pos[1]
@@ -92,7 +89,7 @@ func _input(event):
 			var col = int((mouse_pos[0] - gl.start_pos[0]) / gl.width)
 			if cur_pos.can_play(col) and gl.player_turn and not gl.fl_game_end:
 				var row = cur_pos.play(col)
-				check_game_over(row, col)
+				check_game_over(col)
 				gl.player_turn = false
 
 func check_game_over2(i, j):
@@ -150,41 +147,55 @@ func check_game_over2(i, j):
 			gl.fl_game_end = true
 			gl.win_line = [Vector2(st_i - x, st_j + x), Vector2(st_i - x - 1, st_j + x + 1), Vector2(st_i - x - 2, st_j + x + 2), Vector2(st_i - x - 3, st_j + x + 3)]
 
-func check_game_over(row, col):
+func check_game_over(col):
 	if cur_pos.isWinningMove(col):
 		gl.fl_game_end = true
 		if gl.player_turn:
 			print('Human win')
+			gl.winner = "Игрок"
 		else:
 			print('AI win')
+			gl.winner = "Компьютер"
 
 func bot_turn():
-	var col = randi() % gl.table_width
-	while not cur_pos.can_play(col):
-		col = randi() % gl.table_width
+	#var col = randi() % gl.table_width
+	#while not cur_pos.can_play(col):
+	#	col = randi() % gl.table_width
+	#var row = cur_pos.play(col)
+	#check_game_over(row, col)
 	
-	var row = cur_pos.play(col)
-	check_game_over(row, col)
-	#bot = bot_algo(cur_pos)
+	bot = bot_algo(cur_pos, -10^100, 10^100)
+	#cur_pos.play(bot)
+	#check_game_over(bot)
 	gl.player_turn = true
+	print(bot)
 
-func bot_algo(p):
+func bot_algo(p, alpha, beta):
 	#const empty = 0
 	#const human = -1
 	#const ai = 1
-
+	
 	if p.nbMoves() == gl.table_width * gl.table_height:
 		return 0
 	
 	for x in range(gl.table_width):
-		if p.can_play(x) and p.isWinningMove(x):
+		if p.can_play(x) and p.isWinningMove2(x):
 			return (gl.table_width * gl.table_height + 1 - p.nbMoves())/2
 	
-	var bestScore = -gl.table_width * gl.table_height
+	var mx = (gl.width * gl.height - 1 - p.nbMoves()) / 2
+	if beta > mx: 
+		beta = mx
+		if alpha >= beta:
+			return beta
+	
+	#var bestScore = -gl.table_width * gl.table_height
+	#var bestMove
 	for x in range(gl.table_width):
 		if p.can_play(x):
 			var p2 = Position.new(p)
 			p2.play(x)
-			var score = -bot_algo(p2)
-			if score > bestScore: bestScore = score
-	return bestScore
+			var score = -bot_algo(p2, -beta, -alpha)
+			
+			if score >= beta: return score
+			if score > alpha: alpha = score
+	return alpha
